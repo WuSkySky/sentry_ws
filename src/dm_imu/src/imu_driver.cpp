@@ -14,7 +14,9 @@ namespace dmbot_serial {
 
 // 构造函数实现
 DmImu::DmImu(rclcpp::Node::SharedPtr node)
-    : node_(node), imu_msgs(std::make_unique<sensor_msgs::msg::Imu>())
+    : rclcpp::Node("dm_imu_node", node->get_namespace()),
+    node_(node),
+    imu_msgs(std::make_unique<sensor_msgs::msg::Imu>())
 {
     // 获取参数
     node->declare_parameter("port", "/dev/ttyACM0");
@@ -269,24 +271,25 @@ void DmImu::publish_imu_data()
         RCLCPP_ERROR(node_->get_logger(), "imu_pose_pub_ is null");
     }
 
-    geometry_msgs::msg::TransformStamped tfs;
-    tfs.header.stamp = now;
-    tfs.header.frame_id = "base_link";      // 父坐标系
-    tfs.child_frame_id = "imu_link";        // 子坐标系
-    tfs.transform.rotation = orientation;
+    geometry_msgs::msg::TransformStamped tf_base_imu;
+    tf_base_imu.header.stamp = now;
+    tf_base_imu.header.frame_id = "base_link";      // 父坐标系
+    tf_base_imu.child_frame_id = "imu_link";        // 子坐标系
+    tf_base_imu.transform.rotation = orientation;
 
     // 如果 IMU 安装位置有偏移，可在这里添加平移
-    tfs.transform.translation.x = 0.0;
-    tfs.transform.translation.y = 0.0;
-    tfs.transform.translation.z = 0.0;
+    tf_base_imu.transform.translation.x = 0.0;
+    tf_base_imu.transform.translation.y = 0.0;
+    tf_base_imu.transform.translation.z = 0.0;
 
     if (transform_broadcaster_) {
-        transform_broadcaster_->sendTransform(tfs);
+        transform_broadcaster_->sendTransform(tf_base_imu);
     } else {
         RCLCPP_WARN(node_->get_logger(), "Transform broadcaster not initialized.");
     }
 
     RCLCPP_DEBUG(node_->get_logger(), "发布IMU 数据成功");
+
 }
 
 // 以下是私有方法实现
@@ -394,4 +397,52 @@ void DmImu::restart_imu()
   }
 }
 
+tf2::Vector3 DmImu::calculate_position(rclcpp::Time now, tf2::Quaternion orientation, float accx, float accy, float accz)
+{   
+    float alpha = 0.6;
+    float threshold = 0.2;
+
+    static std::optional<rclcpp::Time> last_time_point;
+    static tf2::Vector3 acc_world_EMA;
+    static tf2::Vector3 velocity_EMA(0,0,0);
+    static tf2::Vector3 position_EMA(0,0,0);
+
+    // 1. 加速度转世界系
+    tf2::Matrix3x3 rotation_matrix(orientation);
+    tf2::Vector3 acc(accx, accy, accz);
+    tf2::Vector3 acc_world = rotation_matrix*acc;
+    acc_world.setZ(acc_world.z() - 9.81); // g = 9.81
+
+    // 2. 记算时间差
+    if (!last_time_point.has_value()) {
+        last_time_point = now;
+        acc_world_EMA=acc_world;
+        return position_EMA;
+    }
+
+    rclcpp::Duration dt_duration = now - last_time_point.value();
+    double dt = dt_duration.seconds();
+
+    last_time_point = now;
+
+    // 3. 加速度滤波
+    acc_world_EMA = alpha*acc_world+(1-alpha)*acc_world_EMA;
+
+    // 3. 速度积分及滤波
+    tf2::Vector3 velocity = velocity_EMA + acc_world_EMA * dt;
+    velocity_EMA = alpha*velocity+(1-alpha)*velocity_EMA;
+
+    // 4. 位置积分及滤波
+    tf2::Vector3 position = position_EMA + velocity_EMA * dt;
+    position_EMA = alpha*position+(1-alpha)*position_EMA;
+
+    // RCLCPP_INFO(this->get_logger(), 
+    //         "acc %.3f, %.3f, %.3f   velocity %.3f, %.3f, %.3f  position %.3f, %.3f, %.3f", 
+    //         acc_world.x(), acc_world.y(), acc_world.z(),
+    //         velocity_EMA.x(), velocity_EMA.y(), velocity_EMA.z(),
+    //         position_EMA.x(), position_EMA.y(), position_EMA.z());
+
+    return position_EMA;
+
+}
 } // namespace dmbot_serial

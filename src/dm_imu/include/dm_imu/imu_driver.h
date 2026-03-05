@@ -68,7 +68,7 @@ namespace dmbot_serial
     float yaw;
   }IMU_Data;
 
-  class DmImu 
+  class DmImu: public rclcpp::Node
   {
   public:
       // 构造函数和析构函数声明
@@ -108,7 +108,8 @@ namespace dmbot_serial
     void save_imu_para();
     void exit_setting_mode();
     void restart_imu();
-};
+    tf2::Vector3 calculate_position(rclcpp::Time now, tf2::Quaternion orientation, float accx, float accy, float accz);
+  };
 
 }
 #endif
