@@ -9,6 +9,10 @@ cmake ..
 make
 sudo make install
 ```
+安装slam_tool_box功能包
+```bash
+sudo apt install ros-humble-slam-toolbox
+```
 
 ### build
 编译 sentry_ws中执行
@@ -42,10 +46,6 @@ ros2 launch rplidar_ros view_rplidar_c1_launch.py
 ros2 launch rplidar_ros view.launch.py
 ```
 
-启动imu
-```bash
-ros2 launch dm_imu run_without_rviz.launch.py 
-```
 
 ### 协议
 下位机至上位机
