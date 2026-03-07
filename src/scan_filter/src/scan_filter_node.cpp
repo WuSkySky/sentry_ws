@@ -31,6 +31,11 @@ void ScanFilterNode::scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr 
     const float angle_min = msg->angle_min;
     const float angle_increment = msg->angle_increment;
 
+    float filtered_angle_min=-M_PI / 2.0;
+    float filtered_angle_max=M_PI / 2.0;
+    // 是否获取了第一个数据
+    bool has_gotten_first_value = false;
+
     // 遍历所有激光点
     for (size_t i = 0; i < msg->ranges.size(); ++i)
     {
@@ -45,7 +50,16 @@ void ScanFilterNode::scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr 
 
             filtered_intensities.push_back(msg->intensities[i]);
 
+            if(!has_gotten_first_value)
+            {
+                filtered_angle_min = angle;
+                has_gotten_first_value = true;
+            }
+
+            filtered_angle_max=angle;
         }
+        if(angle > M_PI / 2.0)
+            break;
     }
 
     // 创建新的 LaserScan 消息
@@ -53,8 +67,8 @@ void ScanFilterNode::scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr 
 
     // 拷贝基础信息
     filtered_scan->header = msg->header;
-    filtered_scan->angle_min = -M_PI / 2.0;  
-    filtered_scan->angle_max = M_PI / 2.0;  
+    filtered_scan->angle_min = filtered_angle_min;  
+    filtered_scan->angle_max = filtered_angle_max;  
     filtered_scan->angle_increment = angle_increment;
     filtered_scan->time_increment = msg->time_increment;
     filtered_scan->scan_time = msg->scan_time;
