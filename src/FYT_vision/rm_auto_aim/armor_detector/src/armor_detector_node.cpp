@@ -222,7 +222,7 @@ std::unique_ptr<Detector> ArmorDetectorNode::initDetector() {
   param_desc.integer_range[0].to_value = 255;
   int binary_thres = declare_parameter("binary_thres", 160, param_desc);
   //声明颜色参数
-  int detect_color = declare_parameter("detect_color", 0);
+  // int detect_color = declare_parameter("detect_color", 0);
   Detector::LightParams l_params = {
       .min_ratio = declare_parameter("light.min_ratio", 0.08),
       .max_ratio = declare_parameter("light.max_ratio", 0.4),
@@ -242,7 +242,7 @@ std::unique_ptr<Detector> ArmorDetectorNode::initDetector() {
           declare_parameter("armor.max_large_center_distance", 5.0),
       .max_angle = declare_parameter("armor.max_angle", 35.0)};
 
-  auto detector = std::make_unique<Detector>(binary_thres, static_cast<EnemyColor>(detect_color),
+  auto detector = std::make_unique<Detector>(binary_thres, EnemyColor::RED,
                                              l_params, a_params);
 
   // Init classifier
@@ -338,9 +338,10 @@ ArmorDetectorNode::onSetParameters(std::vector<rclcpp::Parameter> parameters) {
     if (param.get_name() == "binary_thres") {
       detector_->binary_thres = param.as_int();
     }//增加颜色 
-    else if (param.get_name() == "detect_color") {
-      detector_->detect_color = static_cast<EnemyColor>(param.as_int());
-    }else if (param.get_name() == "classifier_threshold") {
+    // else if (param.get_name() == "detect_color") {
+    //   detector_->detect_color = static_cast<EnemyColor>(param.as_int());
+    // }
+    else if (param.get_name() == "classifier_threshold") {
       detector_->classifier->threshold = param.as_double();
     } else if (param.get_name() == "light.min_ratio") {
       detector_->light_params.min_ratio = param.as_double();

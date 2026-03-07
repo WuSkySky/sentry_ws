@@ -197,12 +197,11 @@ def generate_launch_description():
     push_namespace = PushRosNamespace(launch_params['namespace'])
     
     launch_description_list = [
-        # robot_gimbal_publisher,
-        # push_namespace,
+        robot_gimbal_publisher,
+        push_namespace,
         delay_serial_node,
-        # delay_cam_detector_node,
-        # delay_armor_solver_node
-        ]
+        delay_cam_detector_node,
+        delay_armor_solver_node]
     
     if launch_params['rune']:
         launch_description_list.append(delay_rune_solver_node)

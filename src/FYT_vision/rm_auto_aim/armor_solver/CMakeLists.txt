@@ -53,4 +53,4 @@ endif()
 ## Install ##
 #############
 
-ament_auto_package(USE_SCOPED_HEADER_INSTALL_DIR)
+ament_auto_package()
